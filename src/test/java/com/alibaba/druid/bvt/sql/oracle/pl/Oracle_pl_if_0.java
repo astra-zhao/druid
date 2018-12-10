@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2017 Alibaba Group Holding Ltd.
+ * Copyright 1999-2018 Alibaba Group Holding Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,14 +62,14 @@ public class Oracle_pl_if_0 extends OracleTest {
 			String output = SQLUtils.toOracleString(stmt);
 			assertEquals("IF l_salary > 40000 THEN\n" +
 							"\tgive_bonus(l_employee_id, 500);\n" +
-							"END IF", //
+							"END IF;", //
 					output);
 		}
 		{
 			String output = SQLUtils.toOracleString(stmt, SQLUtils.DEFAULT_LCASE_FORMAT_OPTION);
 			assertEquals("if l_salary > 40000 then\n" +
 							"\tgive_bonus(l_employee_id, 500);\n" +
-							"end if", //
+							"end if;", //
 					output);
 		}
 	}

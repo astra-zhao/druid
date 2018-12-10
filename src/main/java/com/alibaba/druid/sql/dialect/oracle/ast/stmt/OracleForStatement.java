@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2017 Alibaba Group Holding Ltd.
+ * Copyright 1999-2018 Alibaba Group Holding Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ public class OracleForStatement extends OracleStatementImpl {
 
     private boolean            all;
 
+    private SQLName           endLabel;
+
     @Override
     public void accept0(OracleASTVisitor visitor) {
         if (visitor.visit(this)) {
@@ -56,15 +58,14 @@ public class OracleForStatement extends OracleStatementImpl {
     }
 
     public void setRange(SQLExpr range) {
+        if (range != null) {
+            range.setParent(this);
+        }
         this.range = range;
     }
 
     public List<SQLStatement> getStatements() {
         return statements;
-    }
-
-    public void setStatements(List<SQLStatement> statements) {
-        this.statements = statements;
     }
 
     public boolean isAll() {
@@ -73,5 +74,36 @@ public class OracleForStatement extends OracleStatementImpl {
 
     public void setAll(boolean all) {
         this.all = all;
+    }
+
+    public SQLName getEndLabel() {
+        return endLabel;
+    }
+
+    public void setEndLabel(SQLName endLabel) {
+        if (endLabel != null) {
+            endLabel.setParent(this);
+        }
+        this.endLabel = endLabel;
+    }
+
+    public OracleForStatement clone() {
+        OracleForStatement x = new OracleForStatement();
+        if (index != null) {
+            x.setIndex(index.clone());
+        }
+        if (range != null) {
+            x.setRange(range.clone());
+        }
+        for (SQLStatement stmt : statements) {
+            SQLStatement stmt2 = stmt.clone();
+            stmt2.setParent(x);
+            x.statements.add(stmt2);
+        }
+        x.all = all;
+        if (endLabel != null) {
+            x.setEndLabel(endLabel.clone());
+        }
+        return x;
     }
 }

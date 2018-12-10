@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2017 Alibaba Group Holding Ltd.
+ * Copyright 1999-2018 Alibaba Group Holding Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,12 +82,10 @@ public class Oracle_pl_case_1 extends OracleTest {
 							"\t\tWHEN grade = 'C' THEN DBMS_OUTPUT.PUT_LINE('Good'); \n" +
 							"\t\tWHEN grade = 'D' THEN DBMS_OUTPUT.PUT_LINE('Fair'); \n" +
 							"\t\tWHEN grade = 'F' THEN DBMS_OUTPUT.PUT_LINE('Poor');\n" +
-							"\t\tELSE ;\n" +
 							"\tEND CASE;\n" +
-							"\tEXCEPTION\n" +
-							"\t\tWHEN CASE_NOT_FOUND\n" +
-							"\t\t\tDBMS_OUTPUT.PUT_LINE('No such grade');\n" +
-							"END", //
+							"EXCEPTION\n" +
+							"\tWHEN CASE_NOT_FOUND THEN DBMS_OUTPUT.PUT_LINE('No such grade');\n" +
+							"END;", //
 					output);
 		}
 		{
@@ -102,12 +100,10 @@ public class Oracle_pl_case_1 extends OracleTest {
 							"\t\twhen grade = 'C' then DBMS_OUTPUT.PUT_LINE('Good'); \n" +
 							"\t\twhen grade = 'D' then DBMS_OUTPUT.PUT_LINE('Fair'); \n" +
 							"\t\twhen grade = 'F' then DBMS_OUTPUT.PUT_LINE('Poor');\n" +
-							"\t\telse ;\n" +
 							"\tend case;\n" +
-							"\texception\n" +
-							"\t\twhen CASE_NOT_FOUND\n" +
-							"\t\t\tDBMS_OUTPUT.PUT_LINE('No such grade');\n" +
-							"end", //
+							"exception\n" +
+							"\twhen CASE_NOT_FOUND then DBMS_OUTPUT.PUT_LINE('No such grade');\n" +
+							"end;", //
 					output);
 		}
 	}

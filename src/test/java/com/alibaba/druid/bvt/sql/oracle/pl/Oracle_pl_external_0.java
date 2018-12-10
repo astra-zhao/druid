@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2017 Alibaba Group Holding Ltd.
+ * Copyright 1999-2018 Alibaba Group Holding Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ public class Oracle_pl_external_0 extends OracleTest {
 							"\tempid NUMBER, \n" +
 							"\tpct NUMBER\n" +
 							")\n" +
-							"LANGUAGE JAVA NAME 'Adjuster.raiseSalary (int, float)'", //
+							"LANGUAGE JAVA NAME 'Adjuster.raiseSalary (int, float)';", //
 					output);
 		}
 		{
@@ -74,7 +74,7 @@ public class Oracle_pl_external_0 extends OracleTest {
 							"\tempid NUMBER, \n" +
 							"\tpct NUMBER\n" +
 							")\n" +
-							"language java name 'Adjuster.raiseSalary (int, float)'", //
+							"language java name 'Adjuster.raiseSalary (int, float)';", //
 					output);
 		}
 	}

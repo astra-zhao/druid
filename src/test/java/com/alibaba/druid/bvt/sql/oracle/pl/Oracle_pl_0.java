@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2017 Alibaba Group Holding Ltd.
+ * Copyright 1999-2018 Alibaba Group Holding Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,15 +44,19 @@ public class Oracle_pl_0 extends OracleTest {
             statement.accept(visitor);
         }
 
-//        System.out.println("Tables : " + visitor.getTables());
-//        System.out.println("fields : " + visitor.getColumns());
-//        System.out.println("coditions : " + visitor.getConditions());
-//        System.out.println("relationships : " + visitor.getRelationships());
+		System.out.println(stmt);
+
+        System.out.println("Tables : " + visitor.getTables());
+        System.out.println("fields : " + visitor.getColumns());
+        System.out.println("coditions : " + visitor.getConditions());
+        System.out.println("relationships : " + visitor.getRelationships());
 //        System.out.println("orderBy : " + visitor.getOrderByColumns());
 
         assertEquals(1, visitor.getTables().size());
+        assertEquals(1, visitor.getColumns().size());
 
-//        Assert.assertTrue(visitor.getTables().containsKey(new TableStat.Name("employees")));
+        assertTrue(visitor.containsTable("employees"));
+		assertTrue(visitor.containsColumn("employees", "employee_id"));
 //        Assert.assertTrue(visitor.getTables().containsKey(new TableStat.Name("emp_name")));
 
 //        Assert.assertEquals(7, visitor.getColumns().size());
@@ -67,12 +71,12 @@ public class Oracle_pl_0 extends OracleTest {
 							"\temployee_id NUMBER\n" +
 							")\n" +
 							"AS\n" +
-							"tot_emps NUMBER;\n" +
+							"\ttot_emps NUMBER;\n" +
 							"BEGIN\n" +
 							"\tDELETE FROM employees\n" +
 							"\tWHERE employees.employee_id = remove_emp.employee_id;\n" +
 							"\ttot_emps := tot_emps - 1;\n" +
-							"END", //
+							"END;", //
 					output);
 		}
 		{
@@ -80,13 +84,13 @@ public class Oracle_pl_0 extends OracleTest {
 			assertEquals("create procedure remove_emp (\n" +
 							"\temployee_id NUMBER\n" +
 							")\n" +
-							"AS\n" +
-							"tot_emps NUMBER;\n" +
+							"as\n" +
+							"\ttot_emps NUMBER;\n" +
 							"begin\n" +
 							"\tdelete from employees\n" +
 							"\twhere employees.employee_id = remove_emp.employee_id;\n" +
 							"\ttot_emps := tot_emps - 1;\n" +
-							"end", //
+							"end;", //
 					output);
 		}
 	}

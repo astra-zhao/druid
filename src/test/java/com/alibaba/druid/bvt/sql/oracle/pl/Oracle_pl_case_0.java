@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2017 Alibaba Group Holding Ltd.
+ * Copyright 1999-2018 Alibaba Group Holding Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ public class Oracle_pl_case_0 extends OracleTest {
 							"\t\tWHEN grade = 'F' THEN DBMS_OUTPUT.PUT_LINE('Poor');\n" +
 							"\t\tELSE DBMS_OUTPUT.PUT_LINE('No such grade');\n" +
 							"\tEND CASE;\n" +
-							"END", //
+							"END;", //
 					output);
 		}
 		{
@@ -99,7 +99,7 @@ public class Oracle_pl_case_0 extends OracleTest {
 							"\t\twhen grade = 'F' then DBMS_OUTPUT.PUT_LINE('Poor');\n" +
 							"\t\telse DBMS_OUTPUT.PUT_LINE('No such grade');\n" +
 							"\tend case;\n" +
-							"end", //
+							"end;", //
 					output);
 		}
 	}

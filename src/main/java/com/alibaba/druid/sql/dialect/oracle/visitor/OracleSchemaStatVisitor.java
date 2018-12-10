@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2017 Alibaba Group Holding Ltd.
+ * Copyright 1999-2018 Alibaba Group Holding Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,36 +17,19 @@ package com.alibaba.druid.sql.dialect.oracle.visitor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
+import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.SQLName;
 import com.alibaba.druid.sql.ast.SQLObject;
-import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr;
-import com.alibaba.druid.sql.ast.expr.SQLMethodInvokeExpr;
-import com.alibaba.druid.sql.ast.expr.SQLPropertyExpr;
-import com.alibaba.druid.sql.ast.statement.SQLAlterTableStatement;
-import com.alibaba.druid.sql.ast.statement.SQLCheck;
-import com.alibaba.druid.sql.ast.statement.SQLColumnDefinition;
-import com.alibaba.druid.sql.ast.statement.SQLCreateIndexStatement;
-import com.alibaba.druid.sql.ast.statement.SQLCreateTableStatement;
-import com.alibaba.druid.sql.ast.statement.SQLDeleteStatement;
-import com.alibaba.druid.sql.ast.statement.SQLExprTableSource;
-import com.alibaba.druid.sql.ast.statement.SQLForeignKeyImpl;
-import com.alibaba.druid.sql.ast.statement.SQLInsertStatement;
+import com.alibaba.druid.sql.ast.SQLStatement;
+import com.alibaba.druid.sql.ast.expr.*;
+import com.alibaba.druid.sql.ast.statement.*;
 import com.alibaba.druid.sql.ast.statement.SQLMergeStatement.MergeInsertClause;
 import com.alibaba.druid.sql.ast.statement.SQLMergeStatement.MergeUpdateClause;
-import com.alibaba.druid.sql.ast.statement.SQLSelect;
-import com.alibaba.druid.sql.ast.statement.SQLSelectQueryBlock;
-import com.alibaba.druid.sql.ast.statement.SQLTableSource;
-import com.alibaba.druid.sql.ast.statement.SQLUnique;
 import com.alibaba.druid.sql.dialect.oracle.ast.OracleDataTypeIntervalDay;
 import com.alibaba.druid.sql.dialect.oracle.ast.OracleDataTypeIntervalYear;
-import com.alibaba.druid.sql.dialect.oracle.ast.OracleDataTypeTimestamp;
 import com.alibaba.druid.sql.dialect.oracle.ast.clause.CycleClause;
-import com.alibaba.druid.sql.dialect.oracle.ast.clause.FlashbackQueryClause.AsOfFlashbackQueryClause;
-import com.alibaba.druid.sql.dialect.oracle.ast.clause.FlashbackQueryClause.AsOfSnapshotClause;
-import com.alibaba.druid.sql.dialect.oracle.ast.clause.FlashbackQueryClause.VersionsFlashbackQueryClause;
 import com.alibaba.druid.sql.dialect.oracle.ast.clause.ModelClause;
 import com.alibaba.druid.sql.dialect.oracle.ast.clause.ModelClause.CellAssignment;
 import com.alibaba.druid.sql.dialect.oracle.ast.clause.ModelClause.CellAssignmentItem;
@@ -63,20 +46,7 @@ import com.alibaba.druid.sql.dialect.oracle.ast.clause.OracleWithSubqueryEntry;
 import com.alibaba.druid.sql.dialect.oracle.ast.clause.PartitionExtensionClause;
 import com.alibaba.druid.sql.dialect.oracle.ast.clause.SampleClause;
 import com.alibaba.druid.sql.dialect.oracle.ast.clause.SearchClause;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleAnalytic;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleAnalyticWindowing;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleArgumentExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleBinaryDoubleExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleBinaryFloatExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleCursorExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleDatetimeExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleDbLinkExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleIntervalExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleIsSetExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleOuterExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleRangeExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleSizeExpr;
-import com.alibaba.druid.sql.dialect.oracle.ast.expr.OracleSysdateExpr;
+import com.alibaba.druid.sql.dialect.oracle.ast.expr.*;
 import com.alibaba.druid.sql.dialect.oracle.ast.stmt.*;
 import com.alibaba.druid.sql.dialect.oracle.ast.stmt.OracleMultiInsertStatement.ConditionalInsertClause;
 import com.alibaba.druid.sql.dialect.oracle.ast.stmt.OracleMultiInsertStatement.ConditionalInsertClauseItem;
@@ -88,8 +58,8 @@ import com.alibaba.druid.sql.visitor.SchemaStatVisitor;
 import com.alibaba.druid.stat.TableStat;
 import com.alibaba.druid.stat.TableStat.Column;
 import com.alibaba.druid.stat.TableStat.Mode;
-import com.alibaba.druid.stat.TableStat.Relationship;
-import com.alibaba.druid.util.JdbcUtils;
+import com.alibaba.druid.util.FnvHash;
+import com.alibaba.druid.util.JdbcConstants;
 
 public class OracleSchemaStatVisitor extends SchemaStatVisitor implements OracleASTVisitor {
 
@@ -98,16 +68,7 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     }
 
     public OracleSchemaStatVisitor(List<Object> parameters){
-        super(parameters);
-        this.variants.put("DUAL", null);
-        this.variants.put("NOTFOUND", null);
-        this.variants.put("TRUE", null);
-        this.variants.put("FALSE", null);
-    }
-
-    @Override
-    public String getDbType() {
-        return JdbcUtils.ORACLE;
+        super(JdbcConstants.ORACLE, parameters);
     }
 
     protected Column getColumn(SQLExpr expr) {
@@ -120,41 +81,24 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     public boolean visit(OracleSelectTableReference x) {
         SQLExpr expr = x.getExpr();
-
-        if (expr instanceof SQLMethodInvokeExpr) {
-            SQLMethodInvokeExpr methodInvoke = (SQLMethodInvokeExpr) expr;
-            if ("TABLE".equalsIgnoreCase(methodInvoke.getMethodName()) && methodInvoke.getParameters().size() == 1) {
-                expr = methodInvoke.getParameters().get(0);
-            }
-        }
-
-        Map<String, String> aliasMap = getAliasMap();
+        TableStat stat = getTableStat(x);
 
         if (expr instanceof SQLName) {
-            String ident;
+            if (((SQLName) expr).nameHashCode64() == FnvHash.Constants.DUAL) {
+                return false;
+            }
+
             if (expr instanceof SQLPropertyExpr) {
-                String owner = ((SQLPropertyExpr) expr).getOwner().toString();
-                String name = ((SQLPropertyExpr) expr).getName();
-
-                if (aliasMap.containsKey(owner)) {
-                    owner = aliasMap.get(owner);
+                SQLPropertyExpr propertyExpr = (SQLPropertyExpr) expr;
+                if (isSubQueryOrParamOrVariant(propertyExpr)) {
+                    return false;
                 }
-                ident = owner + "." + name;
-            } else {
-                ident = expr.toString();
+            } else if (expr instanceof SQLIdentifierExpr) {
+                SQLIdentifierExpr identifierExpr = (SQLIdentifierExpr) expr;
+                if (isSubQueryOrParamOrVariant(identifierExpr)) {
+                    return false;
+                }
             }
-
-            if (containsSubQuery(ident)) {
-                return false;
-            }
-
-            if ("DUAL".equalsIgnoreCase(ident)) {
-                return false;
-            }
-
-            x.putAttribute(ATTR_TABLE, ident);
-
-            TableStat stat = getTableStat(ident);
 
             Mode mode = getMode();
             switch (mode) {
@@ -177,36 +121,23 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
                     break;
             }
 
-            putAliasMap(aliasMap, x.getAlias(), ident);
-            putAliasMap(aliasMap, ident, ident);
             return false;
         }
 
-        accept(x.getExpr());
+        // accept(x.getExpr());
 
         return false;
     }
 
-    public void endVisit(OracleSelect x) {
-        endVisit((SQLSelect) x);
-    }
-
-    public boolean visit(OracleSelect x) {
-        return visit((SQLSelect) x);
-    }
-
     public void endVisit(SQLSelect x) {
-        if (x.getQuery() != null) {
-            String table = (String) x.getQuery().getAttribute(ATTR_TABLE);
-            if (table != null) {
-                x.putAttribute(ATTR_TABLE, table);
-            }
-        }
-        restoreCurrentTable(x);
     }
 
     public boolean visit(OracleUpdateStatement x) {
-        setAliasMap();
+        if (repository != null
+                && x.getParent() == null) {
+            repository.resolve(x);
+        }
+
         setMode(x, Mode.Update);
 
         SQLTableSource tableSource = x.getTableSource();
@@ -217,15 +148,8 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
         }
 
         if (tableExpr instanceof SQLName) {
-            String ident = tableExpr.toString();
-            setCurrentTable(ident);
-
-            TableStat stat = getTableStat(ident);
+            TableStat stat = getTableStat((SQLName) tableExpr);
             stat.incrementUpdateCount();
-
-            Map<String, String> aliasMap = getAliasMap();
-            aliasMap.put(ident, ident);
-            aliasMap.put(tableSource.getAlias(), ident);
         } else {
             tableSource.accept(this);
         }
@@ -247,21 +171,15 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     }
 
     public boolean visit(OracleSelectQueryBlock x) {
-        if (x.getWhere() != null) {
-            x.getWhere().setParent(x);
-        }
+        SQLExprTableSource into = x.getInto();
+//        if (into != null && into.getExpr() instanceof SQLName) {
+//            TableStat stat = getTableStat((SQLName) into.getExpr());
+//            if (stat != null) {
+//                stat.incrementInsertCount();
+//            }
+//        }
 
-        if (x.getInto() instanceof SQLName) {
-            String tableName = x.getInto().toString();
-            TableStat stat = getTableStat(tableName);
-            if (stat != null) {
-                stat.incrementInsertCount();
-            }
-        }
-
-        visit((SQLSelectQueryBlock) x);
-
-        return true;
+        return visit((SQLSelectQueryBlock) x);
     }
 
     public void endVisit(OracleSelectQueryBlock x) {
@@ -277,28 +195,28 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     }
 
     public boolean visit(SQLIdentifierExpr x) {
-        if ("ROWNUM".equalsIgnoreCase(x.getName())) {
+        String name = x.getName();
+
+        if ("+".equalsIgnoreCase(name)) {
             return false;
         }
 
-        if ("SYSDATE".equalsIgnoreCase(x.getName())) {
+        long hashCode64 = x.hashCode64();
+
+        if (hashCode64 == FnvHash.Constants.ROWNUM
+                || hashCode64 == FnvHash.Constants.SYSDATE
+                || hashCode64 == FnvHash.Constants.LEVEL
+                || hashCode64 == FnvHash.Constants.SQLCODE) {
             return false;
         }
 
-        if ("+".equalsIgnoreCase(x.getName())) {
-            return false;
-        }
-
-        if ("LEVEL".equals(x.getName())) {
+        if (hashCode64 == FnvHash.Constants.ISOPEN
+                && x.getParent() instanceof SQLBinaryOpExpr
+                && ((SQLBinaryOpExpr) x.getParent()).getOperator() == SQLBinaryOperator.Modulus) {
             return false;
         }
 
         return super.visit(x);
-    }
-
-    @Override
-    public void endVisit(OraclePLSQLCommitStatement astNode) {
-
     }
 
     @Override
@@ -323,11 +241,6 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     @Override
     public void endVisit(OracleOuterExpr x) {
-
-    }
-
-    @Override
-    public void endVisit(OracleSelectForUpdate x) {
 
     }
 
@@ -367,7 +280,7 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     }
 
     @Override
-    public boolean visit(OraclePLSQLCommitStatement astNode) {
+    public boolean visit(SQLScriptCommitStatement astNode) {
 
         return true;
     }
@@ -403,37 +316,31 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     }
 
     @Override
-    public boolean visit(OracleSelectForUpdate x) {
-
-        return true;
-    }
-
-    @Override
     public boolean visit(OracleSelectJoin x) {
         super.visit(x);
-
-        for (SQLExpr item : x.getUsing()) {
-            if (item instanceof SQLIdentifierExpr) {
-                String columnName = ((SQLIdentifierExpr) item).getName();
-                String leftTable = (String) x.getLeft().getAttribute(ATTR_TABLE);
-                String rightTable = (String) x.getRight().getAttribute(ATTR_TABLE);
-                if (leftTable != null && rightTable != null) {
-                    Relationship relationship = new Relationship();
-                    relationship.setLeft(new Column(leftTable, columnName));
-                    relationship.setRight(new Column(rightTable, columnName));
-                    relationship.setOperator("USING");
-                    relationships.add(relationship);
-                }
-
-                if (leftTable != null) {
-                    addColumn(leftTable, columnName);
-                }
-
-                if (rightTable != null) {
-                    addColumn(rightTable, columnName);
-                }
-            }
-        }
+//
+//        for (SQLExpr item : x.getUsing()) {
+//            if (item instanceof SQLIdentifierExpr) {
+//                String columnName = ((SQLIdentifierExpr) item).getName();
+//                String leftTable = (String) x.getLeft().getAttribute(ATTR_TABLE);
+//                String rightTable = (String) x.getRight().getAttribute(ATTR_TABLE);
+//                if (leftTable != null && rightTable != null) {
+//                    Relationship relationship = new Relationship();
+//                    relationship.setLeft(new Column(leftTable, columnName));
+//                    relationship.setRight(new Column(rightTable, columnName));
+//                    relationship.setOperator("USING");
+//                    relationships.add(relationship);
+//                }
+//
+//                if (leftTable != null) {
+//                    addColumn(leftTable, columnName);
+//                }
+//
+//                if (rightTable != null) {
+//                    addColumn(rightTable, columnName);
+//                }
+//            }
+//        }
 
         return false;
     }
@@ -467,19 +374,6 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
         accept(x.getSelect());
         accept(x.getPivot());
         accept(x.getFlashback());
-
-        String table = (String) x.getSelect().getAttribute(ATTR_TABLE);
-        if (x.getAlias() != null) {
-            if (table != null) {
-                this.aliasMap.put(x.getAlias(), table);
-            }
-            addSubQuery(x.getAlias(), x.getSelect());
-            this.setCurrentTable(x.getAlias());
-        }
-
-        if (table != null) {
-            x.putAttribute(ATTR_TABLE, table);
-        }
         return false;
     }
 
@@ -516,41 +410,7 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     }
 
     @Override
-    public boolean visit(VersionsFlashbackQueryClause x) {
-
-        return true;
-    }
-
-    @Override
-    public void endVisit(VersionsFlashbackQueryClause x) {
-
-    }
-
-    @Override
-    public boolean visit(AsOfFlashbackQueryClause x) {
-
-        return true;
-    }
-
-    @Override
-    public void endVisit(AsOfFlashbackQueryClause x) {
-
-    }
-
-    @Override
     public boolean visit(OracleWithSubqueryEntry x) {
-        Map<String, String> aliasMap = getAliasMap();
-        if (aliasMap != null) {
-            String alias = null;
-            if (x.getName() != null) {
-                alias = x.getName().toString();
-            }
-
-            if (alias != null) {
-                putAliasMap(aliasMap, alias, null);
-                addSubQuery(alias, x.getSubQuery());
-            }
-        }
         x.getSubQuery().accept(this);
         return false;
     }
@@ -768,19 +628,8 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     public boolean visit(InsertIntoClause x) {
 
         if (x.getTableName() instanceof SQLName) {
-            String ident = ((SQLName) x.getTableName()).toString();
-            setCurrentTable(x, ident);
-
-            TableStat stat = getTableStat(ident);
+            TableStat stat = getTableStat(x.getTableName());
             stat.incrementInsertCount();
-
-            Map<String, String> aliasMap = getAliasMap();
-            if (aliasMap != null) {
-                if (x.getAlias() != null) {
-                    putAliasMap(aliasMap, x.getAlias(), ident);
-                }
-                putAliasMap(aliasMap, ident, ident);
-            }
         }
 
         accept(x.getColumns());
@@ -798,17 +647,15 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     @Override
     public boolean visit(OracleMultiInsertStatement x) {
+        if (repository != null
+                && x.getParent() == null) {
+            repository.resolve(x);
+        }
+
         x.putAttribute("_original_use_mode", getMode());
         setMode(x, Mode.Insert);
 
-        setAliasMap();
-
         accept(x.getSubQuery());
-
-        for (OracleMultiInsertStatement.Entry entry : x.getEntries()) {
-            entry.setParent(x);
-        }
-
         accept(x.getEntries());
 
         return false;
@@ -821,12 +668,6 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     @Override
     public boolean visit(ConditionalInsertClause x) {
-        for (ConditionalInsertClauseItem item : x.getItems()) {
-            item.setParent(x);
-        }
-        if (x.getElseItem() != null) {
-            x.getElseItem().setParent(x);
-        }
         return true;
     }
 
@@ -843,14 +684,9 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
         }
         if (parent instanceof OracleMultiInsertStatement) {
             SQLSelect subQuery = ((OracleMultiInsertStatement) parent).getSubQuery();
-            if (subQuery != null) {
-                String table = (String) subQuery.getAttribute("_table_");
-                setCurrentTable(x, table);
-            }
         }
         x.getWhen().accept(this);
         x.getThen().accept(this);
-        restoreCurrentTable(x);
         return false;
     }
 
@@ -870,19 +706,8 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     }
 
     @Override
-    public boolean visit(OracleExprStatement x) {
-        return false;
-    }
-
-    @Override
-    public void endVisit(OracleExprStatement x) {
-
-    }
-
-    @Override
     public boolean visit(OracleLockTableStatement x) {
-        String tableName = x.getTable().toString();
-        getTableStat(tableName);
+        getTableStat(x.getTable());
         return false;
     }
 
@@ -918,7 +743,23 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     @Override
     public boolean visit(com.alibaba.druid.sql.dialect.oracle.ast.stmt.OracleExceptionStatement.Item x) {
-        return true;
+        SQLExpr when = x.getWhen();
+        if (when instanceof SQLIdentifierExpr) {
+            SQLIdentifierExpr ident = (SQLIdentifierExpr) when;
+            if (ident.getName().equalsIgnoreCase("OTHERS")) {
+                // skip
+            } else {
+                this.visit(ident);
+            }
+        } else if (when != null) {
+            when.accept(this);
+        }
+
+        for (SQLStatement stmt : x.getStatements()) {
+            stmt.accept(this);
+        }
+
+        return false;
     }
 
     @Override
@@ -962,16 +803,6 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     }
 
     @Override
-    public boolean visit(OracleAlterProcedureStatement x) {
-        return false;
-    }
-
-    @Override
-    public void endVisit(OracleAlterProcedureStatement x) {
-
-    }
-
-    @Override
     public boolean visit(OracleAlterTableDropPartition x) {
         return false;
     }
@@ -993,7 +824,6 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     @Override
     public void endVisit(SQLAlterTableStatement x) {
-        restoreCurrentTable(x);
     }
 
     @Override
@@ -1039,11 +869,12 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     @Override
     public boolean visit(OracleAlterTableModify x) {
         SQLAlterTableStatement stmt = (SQLAlterTableStatement) x.getParent();
-        String table = stmt.getName().toString();
+        SQLName tableName = stmt.getName();
+        String table = tableName.toString();
 
         for (SQLColumnDefinition column : x.getColumns()) {
-            String columnName = column.getName().toString();
-            addColumn(table, columnName);
+            SQLName columnName = column.getName();
+            addColumn(table, columnName.toString());
 
         }
 
@@ -1062,7 +893,6 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     @Override
     public void endVisit(OracleCreateIndexStatement x) {
-        restoreCurrentTable(x);
     }
 
     @Override
@@ -1077,14 +907,8 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     @Override
     public boolean visit(OracleForStatement x) {
-        x.getRange().setParent(x);
-
-        SQLName index = x.getIndex();
-        this.getVariants().put(index.toString(), x);
-
         x.getRange().accept(this);
         accept(x.getStatements());
-
         return false;
     }
 
@@ -1172,16 +996,6 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     }
 
     @Override
-    public boolean visit(OracleCommitStatement x) {
-        return true;
-    }
-
-    @Override
-    public void endVisit(OracleCommitStatement x) {
-
-    }
-
-    @Override
     public boolean visit(OracleAlterTriggerStatement x) {
         return false;
     }
@@ -1198,16 +1012,6 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     @Override
     public void endVisit(OracleAlterSynonymStatement x) {
-
-    }
-
-    @Override
-    public boolean visit(AsOfSnapshotClause x) {
-        return false;
-    }
-
-    @Override
-    public void endVisit(AsOfSnapshotClause x) {
 
     }
 
@@ -1282,22 +1086,22 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
     }
 
     @Override
+    public boolean visit(OracleContinueStatement x) {
+        return false;
+    }
+
+    @Override
+    public void endVisit(OracleContinueStatement x) {
+
+    }
+
+    @Override
     public boolean visit(OracleRaiseStatement x) {
         return false;
     }
 
     @Override
     public void endVisit(OracleRaiseStatement x) {
-
-    }
-
-    @Override
-    public boolean visit(OracleSavePointStatement x) {
-        return false;
-    }
-
-    @Override
-    public void endVisit(OracleSavePointStatement x) {
 
     }
 
@@ -1318,16 +1122,6 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     @Override
     public void endVisit(OracleDropDbLinkStatement x) {
-
-    }
-
-    @Override
-    public boolean visit(OracleDataTypeTimestamp x) {
-        return false;
-    }
-
-    @Override
-    public void endVisit(OracleDataTypeTimestamp x) {
 
     }
 
@@ -1398,6 +1192,175 @@ public class OracleSchemaStatVisitor extends SchemaStatVisitor implements Oracle
 
     @Override
     public void endVisit(OracleCheck x) {
+
+    }
+
+    @Override
+    public boolean visit(OracleSupplementalIdKey x) {
+        return true;
+    }
+
+    @Override
+    public void endVisit(OracleSupplementalIdKey x) {
+
+    }
+
+    @Override
+    public boolean visit(OracleSupplementalLogGrp x) {
+        return true;
+    }
+
+    @Override
+    public void endVisit(OracleSupplementalLogGrp x) {
+
+    }
+
+    public boolean visit(OracleCreateTableStatement.Organization x) {
+        return false;
+    }
+
+    public void endVisit(OracleCreateTableStatement.Organization x) {
+
+    }
+
+    @Override
+    public boolean visit(OracleCreateTableStatement.OIDIndex x) {
+        return false;
+    }
+
+    @Override
+    public void endVisit(OracleCreateTableStatement.OIDIndex x) {
+
+    }
+
+    @Override
+    public boolean visit(OracleCreatePackageStatement x) {
+        if (repository != null
+                && x.getParent() == null) {
+            repository.resolve(x);
+        }
+
+        for (SQLStatement stmt : x.getStatements()) {
+            stmt.accept(this);
+        }
+        return false;
+    }
+
+    @Override
+    public void endVisit(OracleCreatePackageStatement x) {
+
+    }
+
+    @Override
+    public boolean visit(OracleExecuteImmediateStatement x) {
+        SQLExpr dynamicSql = x.getDynamicSql();
+
+        String sql = null;
+
+        if (dynamicSql instanceof SQLIdentifierExpr) {
+            String varName = ((SQLIdentifierExpr) dynamicSql).getName();
+
+            SQLExpr valueExpr = null;
+            if (x.getParent() instanceof SQLBlockStatement) {
+                List<SQLStatement> statementList = ((SQLBlockStatement) x.getParent()).getStatementList();
+                for (int i = 0, size = statementList.size(); i < size; ++i) {
+                    SQLStatement stmt = statementList.get(i);
+                    if (stmt == x) {
+                        break;
+                    }
+
+                    if (stmt instanceof SQLSetStatement) {
+                        List<SQLAssignItem> items = ((SQLSetStatement) stmt).getItems();
+                        for (SQLAssignItem item : items) {
+                            if (item.getTarget().equals(dynamicSql)) {
+                                valueExpr = item.getValue();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (valueExpr != null) {
+                dynamicSql = valueExpr;
+            }
+        }
+
+        if (dynamicSql instanceof SQLCharExpr) {
+            sql = ((SQLCharExpr) dynamicSql).getText();
+        }
+
+        if (sql != null) {
+            List<SQLStatement> stmtList = SQLUtils.parseStatements(sql, dbType);
+            for (SQLStatement stmt : stmtList) {
+                stmt.accept(this);
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void endVisit(OracleExecuteImmediateStatement x) {
+
+    }
+
+    @Override
+    public boolean visit(OracleTreatExpr x) {
+        return true;
+    }
+
+    @Override
+    public void endVisit(OracleTreatExpr x) {
+
+    }
+
+    @Override
+    public boolean visit(OracleCreateSynonymStatement x) {
+        return false;
+    }
+
+    @Override
+    public void endVisit(OracleCreateSynonymStatement x) {
+
+    }
+
+    @Override
+    public boolean visit(OracleCreateTypeStatement x) {
+        return false;
+    }
+
+    @Override
+    public void endVisit(OracleCreateTypeStatement x) {
+
+    }
+
+    @Override
+    public boolean visit(OraclePipeRowStatement x) {
+        return false;
+    }
+
+    @Override
+    public void endVisit(OraclePipeRowStatement x) {
+
+    }
+
+    @Override
+    public boolean visit(OracleIsOfTypeExpr x) {
+        return false;
+    }
+
+    @Override
+    public void endVisit(OracleIsOfTypeExpr x) {
+
+    }
+
+    @Override
+    public boolean visit(OracleRunStatement x) {
+        return true;
+    }
+
+    @Override
+    public void endVisit(OracleRunStatement x) {
 
     }
 }
